@@ -1,9 +1,8 @@
 name: 🔐 Sync .env to Hugging Face Secrets
 
 on:
-  push:
-    branches:
-      - main  # or any branch you want
+  workflow_dispatch:  # ✅ safer than push trigger for secrets
+  # you can still use `push` if you want it automatic
 
 jobs:
   sync:
@@ -22,38 +21,43 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           DOTENV_CONTENT: ${{ secrets.DOTENV_CONTENT }}
+          SPACE_ID: ali4568/LawMadad   # ✅ moved to env for cleaner code
         run: |
           python - <<'EOF'
           import os, requests
-          from dotenv import dotenv_values
 
           HF_TOKEN = os.getenv("HF_TOKEN")
           DOTENV_CONTENT = os.getenv("DOTENV_CONTENT")
-          SPACE_ID = "ali4568/LawMadad"  # change this
+          SPACE_ID = os.getenv("SPACE_ID")
 
-          # Parse .env contents
-          lines = DOTENV_CONTENT.strip().splitlines()
+          if not HF_TOKEN or not DOTENV_CONTENT:
+              raise ValueError("❌ Missing HF_TOKEN or DOTENV_CONTENT environment variables.")
+
+          # Parse .env-like content from secret
           secrets = {}
-          for line in lines:
+          for line in DOTENV_CONTENT.strip().splitlines():
               if line and not line.startswith("#") and "=" in line:
                   key, value = line.split("=", 1)
                   secrets[key.strip()] = value.strip()
 
-          # Hugging Face API endpoint
           url = f"https://huggingface.co/api/spaces/{SPACE_ID}/secrets"
           headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
           for key, value in secrets.items():
               print(f"🔁 Syncing {key} ...")
-              payload = {"key": key, "value": value}
-              resp = requests.post(url, headers=headers, json=payload)
+              resp = requests.post(url, headers=headers, json={"key": key, "value": value})
               if resp.status_code in (200, 201):
-                  print(f"✅ {key} synced.")
+                  print(f"✅ {key} created/updated successfully.")
               elif resp.status_code == 409:
                   print(f"🌀 {key} already exists, updating...")
-                  requests.put(f"{url}/{key}", headers=headers, json={"value": value})
+                  update_url = f"{url}/{key}"
+                  update_resp = requests.put(update_url, headers=headers, json={"value": value})
+                  if update_resp.status_code in (200, 201):
+                      print(f"✅ {key} updated successfully.")
+                  else:
+                      print(f"❌ Failed to update {key}: {update_resp.status_code} - {update_resp.text}")
               else:
                   print(f"❌ Failed to sync {key}: {resp.status_code} - {resp.text}")
 
-          print("🎯 All .env variables synced to Hugging Face!")
+          print("🎯 All .env variables synced to Hugging Face successfully!")
           EOF
