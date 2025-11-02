@@ -15,16 +15,26 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install huggingface_hub
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade huggingface_hub
 
       - name: Deploy to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          huggingface-cli upload \
-            --repo-id ali4568/LawMadad \
-            --repo-type space \
-            --token $HF_TOKEN \
-            --commit-message "🚀 Auto-deploy from GitHub: $GITHUB_SHA" \
-            ./
+          python - <<'EOF'
+          import os
+          from huggingface_hub import upload_folder
+          
+          repo_id = "ali4568/LawMadad"
+          print(f"🚀 Deploying to Hugging Face Space: {repo_id}")
+          
+          upload_folder(
+              folder_path=".",  # Upload current folder
+              repo_id=repo_id,
+              repo_type="space",
+              token=os.environ["HF_TOKEN"],
+              commit_message="🚀 Auto-deploy from GitHub Action"
+          )
+          print("✅ Deployment complete!")
+          EOF
