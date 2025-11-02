@@ -22,8 +22,9 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -m huggingface_hub.upload_repo \
+          huggingface-cli upload \
             --repo-id ali4568/LawMadad \
             --repo-type space \
             --token $HF_TOKEN \
-            --commit-message "🚀 Auto-deploy from GitHub: $GITHUB_SHA"
+            --commit-message "🚀 Auto-deploy from GitHub: $GITHUB_SHA" \
+            ./
