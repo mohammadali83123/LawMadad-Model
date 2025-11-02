@@ -1,0 +1,29 @@
+name: 🚀 Deploy to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - master  # Trigger on pushes to main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install huggingface_hub
+
+      - name: Deploy to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -m huggingface_hub.upload_repo \
+            --repo-id ali4568/LawMadad \
+            --repo-type space \
+            --token $HF_TOKEN \
+            --commit-message "🚀 Auto-deploy from GitHub: $GITHUB_SHA"
